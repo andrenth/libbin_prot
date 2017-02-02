@@ -1,0 +1,7 @@
+S .
+
+B ../_build/test
+B +threads
+
+PKG core
+PKG bin_prot
