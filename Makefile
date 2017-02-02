@@ -1,6 +1,11 @@
 CFLAGS = -Wall -g
+PREFIX = /usr/local
 
-all: lib
+all: build
+
+build: build_setup common read write size
+	cd _build/src && \
+		gcc $(CFLAGS) -shared -o libbin_prot.so common.o read.o write.o
 
 build_setup:
 	mkdir -p _build/src
@@ -18,12 +23,34 @@ write: src/write.c build_setup common
 size: src/size.c build_setup common
 	cd _build/src && gcc $(CFLAGS) -fPIC -o size.o -c size.c
 
-lib: read write size common build_setup
-	cd _build/src && \
-		gcc $(CFLAGS) -shared -o libbin_prot.so common.o read.o write.o
+install: build
+	mkdir -p $(PREFIX)/include
+	mkdir -p $(PREFIX)/lib
+	install -m644 _build/src/bin_prot.h $(PREFIX)/include
+	install -m644 _build/src/libbin_prot.so $(PREFIX)/lib
+
+uninstall:
+	rm -f $(PREFIX)/include/bin_prot.h
+	rm -f $(PREFIX)/lib/libbin_prot.so
 
 clean:
 	rm -rf _build
+
+TEST_CFLAGS = -I../src -L../src
+TEST_LDFLAGS = -lbin_prot
+
+test: test_sanity test_c_int_reader test_c_int_writer
+
+test_sanity: test_build_ocaml_int_reader test_build_ocaml_int_writer
+	./_build/test/ocaml_int_writer && ./_build/test/ocaml_int_reader
+
+test_c_int_reader: test_setup test_build_ocaml_int_writer test_build_c_int_reader
+	./_build/test/ocaml_int_writer && \
+		LD_LIBRARY_PATH=_build/src ./_build/test/c_int_reader
+
+test_c_int_writer: test_setup test_build_c_int_writer test_build_ocaml_int_reader
+	LD_LIBRARY_PATH=_build/src ./_build/test/c_int_writer && \
+		./_build/test/ocaml_int_reader
 
 test_setup:
 	mkdir -p _build/test
@@ -48,38 +75,22 @@ test_build_ocaml_int_writer: test_setup test/int_writer.ml
 			test.ml                              \
 			int_writer.ml
 
-TEST_CFLAGS = -I../src -L../src
-TEST_LDFLAGS = -lbin_prot
-
-test_build_c_base: test_setup test/test.c
-	cd _build/test && \
-		gcc $(CFLAGS) $(TEST_CFLAGS) -o test.o -c test.c
-
-test_build_c_int_reader: lib test_setup test_build_c_base test/int_reader.c
+test_build_c_int_reader: build test_setup test_build_c_base test/int_reader.c
 	cd _build/test &&                \
 		gcc $(CFLAGS) $(TEST_CFLAGS)   \
 			-o c_int_reader              \
 			test.o                       \
 			int_reader.c $(TEST_LDFLAGS)
 
-test_build_c_int_writer: lib test_setup test_build_c_base test/int_writer.c
+test_build_c_int_writer: build test_setup test_build_c_base test/int_writer.c
 	cd _build/test &&                \
 		gcc $(CFLAGS) $(TEST_CFLAGS)   \
 			-o c_int_writer              \
 			test.o                       \
 			int_writer.c $(TEST_LDFLAGS)
 
-test_c_int_reader: test_setup test_build_ocaml_int_writer test_build_c_int_reader
-	./_build/test/ocaml_int_writer && \
-		LD_LIBRARY_PATH=_build/src ./_build/test/c_int_reader
+test_build_c_base: test_setup test/test.c
+	cd _build/test && \
+		gcc $(CFLAGS) $(TEST_CFLAGS) -o test.o -c test.c
 
-test_c_int_writer: test_setup test_build_c_int_writer test_build_ocaml_int_reader
-	LD_LIBRARY_PATH=_build/src ./_build/test/c_int_writer && \
-		./_build/test/ocaml_int_reader
-
-test_sanity: test_build_ocaml_int_reader test_build_ocaml_int_writer
-	./_build/test/ocaml_int_writer && ./_build/test/ocaml_int_reader
-
-test: test_sanity test_c_int_reader test_c_int_writer
-
-.PHONY: test lib
+.PHONY: test build
