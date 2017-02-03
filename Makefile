@@ -1,11 +1,21 @@
+MAJOR  = 1
+VER    = 1.0
 CFLAGS = -Wall -g
 PREFIX = /usr/local
 
-all: build
+all: shared static
 
-build: build_setup common read write size
+shared: build_setup common read write size
+	cd _build/src &&                        \
+		gcc $(CFLAGS) -shared                 \
+			-Wl,-soname,libbin_prot.so.$(MAJOR) \
+			-o libbin_prot.so.$(MAJOR).$(VER)   \
+			common.o read.o write.o
+
+static: build_setup
 	cd _build/src && \
-		gcc $(CFLAGS) -shared -o libbin_prot.so common.o read.o write.o
+		ar rcs libbin_prot.a common.o read.o write.o && \
+		ranlib libbin_prot.a
 
 build_setup:
 	mkdir -p _build/src
@@ -23,15 +33,20 @@ write: src/write.c build_setup common
 size: src/size.c build_setup common
 	cd _build/src && gcc $(CFLAGS) -fPIC -o size.o -c size.c
 
-install: build
+install: shared static
 	mkdir -p $(PREFIX)/include
+	install -m0644 _build/src/bin_prot.h $(PREFIX)/include
 	mkdir -p $(PREFIX)/lib
-	install -m644 _build/src/bin_prot.h $(PREFIX)/include
-	install -m644 _build/src/libbin_prot.so $(PREFIX)/lib
+	strip _build/src/libbin_prot.so.$(MAJOR).$(VER)
+	install -m0644 _build/src/libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib
+	ln -sf libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib/libbin_prot.so
+	ln -sf libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib/libbin_prot.so.$(MAJOR)
 
 uninstall:
 	rm -f $(PREFIX)/include/bin_prot.h
 	rm -f $(PREFIX)/lib/libbin_prot.so
+	rm -f $(PREFIX)/lib/libbin_prot.so.$(MAJOR)
+	rm -f $(PREFIX)/lib/libbin_prot.so.$(MAJOR).$(VER)
 
 clean:
 	rm -rf _build
@@ -75,14 +90,14 @@ test_build_ocaml_int_writer: test_setup test/int_writer.ml
 			test.ml                              \
 			int_writer.ml
 
-test_build_c_int_reader: build test_setup test_build_c_base test/int_reader.c
+test_build_c_int_reader: shared static test_setup test_build_c_base test/int_reader.c
 	cd _build/test &&                \
 		gcc $(CFLAGS) $(TEST_CFLAGS)   \
 			-o c_int_reader              \
 			test.o                       \
 			int_reader.c $(TEST_LDFLAGS)
 
-test_build_c_int_writer: build test_setup test_build_c_base test/int_writer.c
+test_build_c_int_writer: shared static test_setup test_build_c_base test/int_writer.c
 	cd _build/test &&                \
 		gcc $(CFLAGS) $(TEST_CFLAGS)   \
 			-o c_int_writer              \
