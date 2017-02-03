@@ -3,6 +3,20 @@ VER    = 1.0
 CFLAGS = -Wall -g
 PREFIX = /usr/local
 
+define PKG_CONFIG
+prefix=$(PREFIX)
+exec_prefix=$(PREFIX)/bin
+libdir=$(PREFIX)/lib
+includedir=$(PREFIX)/include
+
+Name: libbin_prot
+Description: bin_prot implementation in C
+Version: $(VER)
+
+Libs: -L$${libdir} -lbin_prot
+Cflags: -I$${includedir}
+endef
+
 all: shared static
 
 shared: build_setup common read write size
@@ -33,7 +47,11 @@ write: src/write.c build_setup common
 size: src/size.c build_setup common
 	cd _build/src && gcc $(CFLAGS) -fPIC -o size.o -c size.c
 
-install: shared static
+export PKG_CONFIG
+pkgconfig:
+	@echo "$$PKG_CONFIG" > _build/libbin_prot.pc
+
+install: shared static pkgconfig
 	mkdir -p $(PREFIX)/include
 	install -m0644 _build/src/bin_prot.h $(PREFIX)/include
 	mkdir -p $(PREFIX)/lib
@@ -41,6 +59,7 @@ install: shared static
 	install -m0644 _build/src/libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib
 	ln -sf libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib/libbin_prot.so
 	ln -sf libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib/libbin_prot.so.$(MAJOR)
+	install -m0644 _build/libbin_prot.pc $(PREFIX)/lib/pkgconfig
 
 uninstall:
 	rm -f $(PREFIX)/include/bin_prot.h
