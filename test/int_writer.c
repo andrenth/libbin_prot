@@ -11,11 +11,9 @@
 struct write_test {
     char   *name;
     writer  write;
-    FILE   *fp;
 };
 
 struct write_line_data {
-    FILE    *fp;
     char     type[32];
     int64_t  value;
     size_t   index;
@@ -46,10 +44,10 @@ struct write_test writers[] = {
 };
 
 void
-write_int(int64_t i, struct write_test *w)
+write_int(int64_t i, struct write_test *w, FILE *fp)
 {
     size_t pos = w->write(buf, 0, (void *)i);
-    fwrite(buf, pos, 1, w->fp);
+    fwrite(buf, pos, 1, fp);
 }
 
 ssize_t
@@ -64,45 +62,15 @@ find_writer(char *type, struct write_test *writers)
     return -1;
 }
 
-int
-read_line(FILE *fp, struct write_line_data *data)
+void
+set_fp(char *bin_file, void *arg)
 {
-    char    *line = NULL;
-    size_t   n    = 0;
-    ssize_t  r    = getline(&line, &n, fp);;
-    if (r == -1) {
-        if (errno != 0)
-            err(1, "getline");
-        return -1;
-    }
-    int64_t value;
-    char *type = test_parse_line(line, &value);
-    if (type == NULL)
-        err(1, "test_parse_line");
-
-    data->value = value;
-    data->type_changed = 0;
-    if (strcmp(type, data->type) != 0) {
-        data->type_changed = 1;
-        data->pos = 0;
-        snprintf(data->type, sizeof(data->type), "%s", type);
-        ssize_t index = find_writer(type, writers);
-        if (index < 0) {
-            data->will_be_tested = 0;
-            goto out;
-        }
-        data->will_be_tested = 1;
-        data->index = index;
-
-        char *bin_file = test_bin_file(type);
-        data->fp = fopen(bin_file, "w");
-        if (data->fp == NULL)
-            err(1, "fopen: %s", bin_file);
-        free(bin_file);
-    }
-out:
-    free(line);
-    return 0;
+    FILE **fp = (FILE **)arg;
+    if (*fp != NULL)
+        fclose(*fp);
+    *fp = fopen(bin_file, "w");
+    if (*fp == NULL)
+        err(1, "fopen: %s", bin_file);
 }
 
 int
@@ -117,8 +85,9 @@ main(void)
     printf("[-] Testing writer\n");
 
     for (;;) {
-        struct write_line_data data;
-        int r = read_line(fp, &data);
+        FILE   *bin_fp;
+        struct  line_data data;
+        int r = test_read_line(fp, &data, (struct test *)writers, &bin_fp, set_fp);
         if (r == -1)
             break; /* eof */
         if (data.type_changed) {
@@ -131,61 +100,7 @@ main(void)
         if (data.will_be_tested) {
             struct write_test *writer;
             writer = &writers[data.index];
-            writer->fp = data.fp;
-            write_int(data.value, writer);
-            //fclose(data.fp);
+            write_int(data.value, writer, bin_fp);
         }
     }
-    fclose(fp);
 }
-
-#if 0
-int
-main(void)
-{
-    FILE *fp;
-
-    fp = fopen(TEST_EXPECTATIONS_FILE, "r");
-    if (fp == NULL)
-        err(1, "fopen");
-
-    char cur_type[16] = "";
-    size_t cur_type_idx = 0;
-    for (;;) {
-        char    *line = NULL;
-        size_t   n    = 0;
-        ssize_t  r    = getline(&line, &n, fp);;
-        if (r == -1) {
-            if (errno != 0)
-                err(1, "getline");
-            break;
-        }
-        int64_t i64;
-        char *type = test_parse_line(line, &i64);
-        if (type == NULL)
-            err(1, "test_parse_line");
-
-        if (strcmp(type, cur_type) != 0) {
-            int i;
-            for (i = 0; writers[i].name != NULL; i++) {
-                if (strcmp(type, writers[i].name) != 0)
-                    continue;
-                cur_type_idx = i;
-                break;
-            }
-            char *bin_file = test_bin_file(type);
-            FILE *fp = fopen(bin_file, "w");
-            free(bin_file);
-            if (fp == NULL)
-                continue; /* ignore unsupported type */
-            writers[cur_type_idx].fp = fp;
-            snprintf(cur_type, sizeof(cur_type), "%s", type);
-            printf("testing %s\n", type);
-        }
-        write_int(i64, &writers[cur_type_idx]);
-        free(line);
-    }
-
-    fclose(fp);
-}
-#endif

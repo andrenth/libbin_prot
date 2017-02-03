@@ -18,11 +18,9 @@
 struct read_test {
     char   *name;
     reader  read;
-    void   *buf;
 };
 
 struct read_line_data {
-    void    *buffer;
     char     type[32];
     int64_t  value;
     size_t   index;
@@ -51,12 +49,12 @@ struct read_test readers[] = {
 };
 
 void
-read_int(int64_t expected, struct read_test *r, size_t *pos)
+read_int(int64_t expected, struct read_test *r, size_t *pos, void *buf)
 {
     int res;
     int64_t actual;
 
-    res = r->read(r->buf, pos, &actual);
+    res = r->read(buf, pos, &actual);
     if (res == -1)
         errx(1, "read_int: %s", r->name);
 
@@ -112,43 +110,12 @@ find_reader(char *type, struct read_test *readers)
     return -1;
 }
 
-int
-read_line(FILE *fp, struct read_line_data *data)
+void
+set_buffer(char *bin_file, void *arg)
 {
-    char    *line = NULL;
-    size_t   n    = 0;
-    ssize_t  r    = getline(&line, &n, fp);;
-    if (r == -1) {
-        if (errno != 0)
-            err(1, "getline");
-        return -1;
-    }
-    int64_t value;
-    char *type = test_parse_line(line, &value);
-    if (type == NULL)
-        err(1, "test_parse_line");
-
-    data->value = value;
-    data->type_changed = 0;
-    if (strcmp(type, data->type) != 0) {
-        data->type_changed = 1;
-        data->pos = 0;
-        snprintf(data->type, sizeof(data->type), "%s", type);
-        ssize_t index = find_reader(type, readers);
-        if (index < 0) {
-            data->will_be_tested = 0;
-            goto out;
-        }
-        data->will_be_tested = 1;
-        data->index = index;
-
-        char *bin_file = test_bin_file(type);
-        data->buffer = read_bin(bin_file);
-        free(bin_file);
-    }
-out:
-    free(line);
-    return 0;
+    void **buf = (void **)arg;
+    free(*buf);
+    *buf = read_bin(bin_file);
 }
 
 int
@@ -163,8 +130,9 @@ main(void)
     printf("[-] Testing reader\n");
 
     for (;;) {
-        struct read_line_data data;
-        int r = read_line(fp, &data);
+        void   *buf;
+        struct  line_data data;
+        int r = test_read_line(fp, &data, (struct test *)readers, &buf, set_buffer);
         if (r == -1)
             break; /* eof */
         if (data.type_changed) {
@@ -177,9 +145,7 @@ main(void)
         if (data.will_be_tested) {
             struct read_test *reader;
             reader = &readers[data.index];
-            reader->buf = data.buffer;
-            read_int(data.value, reader, &data.pos);
-            //free(reader->buf);
+            read_int(data.value, reader, &data.pos, buf);
         }
     }
     fclose(fp);
