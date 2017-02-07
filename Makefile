@@ -24,11 +24,11 @@ shared: build_setup common read write size
 		gcc $(CFLAGS) -shared                 \
 			-Wl,-soname,libbin_prot.so.$(MAJOR) \
 			-o libbin_prot.so.$(MAJOR).$(VER)   \
-			common.o read.o write.o
+			common.o read.o write.o size.o
 
 static: build_setup
 	cd _build/src && \
-		ar rcs libbin_prot.a common.o read.o write.o && \
+		ar rcs libbin_prot.a common.o read.o write.o size.o && \
 		ranlib libbin_prot.a
 
 build_setup:
