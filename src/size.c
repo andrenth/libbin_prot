@@ -8,7 +8,7 @@
 typedef size_t (*sizer)(void *v);
 
 size_t
-bin_size_unit(void)
+bin_size_unit(void *_unused)
 {
     return 1;
 }
@@ -140,25 +140,25 @@ bin_size_variant_int(int32_t _unused)
 }
 
 size_t
-bin_size_int_8bit(int8_t _unused)
+bin_size_int_8bit(long _unused)
 {
     return 1;
 }
 
 size_t
-bin_size_int_16bit(int16_t _unused)
+bin_size_int_16bit(long _unused)
 {
     return 2;
 }
 
 size_t
-bin_size_int_32bit(int32_t _unused)
+bin_size_int_32bit(long _unused)
 {
     return 4;
 }
 
 size_t
-bin_size_int_64bit(int64_t _unused)
+bin_size_int_64bit(long _unused)
 {
     return 8;
 }

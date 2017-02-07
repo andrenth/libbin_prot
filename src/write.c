@@ -2,13 +2,14 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "common.h"
 
 typedef size_t (*writer)(void *buf, size_t pos, void *v);
 
 size_t
-bin_write_unit(void *buf, size_t pos)
+bin_write_unit(void *buf, size_t pos, void *_unused)
 {
     char *b = (char *)buf;
     b[pos] = '\000';

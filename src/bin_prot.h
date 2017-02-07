@@ -63,7 +63,7 @@ int bin_read_digest(void *buf, size_t *pos, char **res);
  * Writers
  */
 
-size_t bin_write_unit(void *buf, size_t pos);
+size_t bin_write_unit(void *buf, size_t pos, void *_unused);
 size_t bin_write_bool(void *buf, size_t pos, int v);
 size_t bin_write_char(void *buf, size_t pos, char c);
 
@@ -112,7 +112,7 @@ size_t bin_write_digest(void *buf, size_t pos, char *s);
  * Sizers
  */
 
-size_t bin_size_unit(void);
+size_t bin_size_unit(void *_unused);
 size_t bin_size_bool(int _unused);
 size_t bin_size_char(char _unused);
 
@@ -122,10 +122,10 @@ size_t bin_size_int(long n);
 size_t bin_size_int32(int32_t n);
 size_t bin_size_int64(int64_t n);
 
-size_t bin_size_int_8bit(int8_t _unused);
-size_t bin_size_int_16bit(int16_t _unused);
-size_t bin_size_int_32bit(int32_t _unused);
-size_t bin_size_int_64bit(int64_t _unused);
+size_t bin_size_int_8bit(long _unused);
+size_t bin_size_int_16bit(long _unused);
+size_t bin_size_int_32bit(long _unused);
+size_t bin_size_int_64bit(long _unused);
 
 size_t bin_size_network16_int(int16_t _unused);
 size_t bin_size_network32_int(int32_t _unused);
