@@ -8,7 +8,7 @@ struct bin_type_class_writer name##_writer = {  \
 struct bin_type_class_reader name##_reader = {  \
     .read = (bin_reader)bin_read_##name,        \
 };                                              \
-struct bin_type_class bin_type_class_##name = { \
+struct bin_type_class bin_##name = { \
     .writer = &name##_writer,                   \
     .reader = &name##_reader,                   \
 };
