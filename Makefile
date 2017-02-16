@@ -1,6 +1,6 @@
 MAJOR  = 1
 VER    = 1.0
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -I.
 PREFIX = /usr/local
 
 define PKG_CONFIG
@@ -19,16 +19,24 @@ endef
 
 all: shared static
 
-shared: build_setup common read write size
+shared: build_setup common read write size type_class rpc utils
 	cd _build/src &&                        \
 		gcc $(CFLAGS) -shared                 \
 			-Wl,-soname,libbin_prot.so.$(MAJOR) \
 			-o libbin_prot.so.$(MAJOR).$(VER)   \
-			common.o read.o write.o size.o
+			common.o read.o write.o size.o type_class.o rpc.o utils.o
 
-static: build_setup
-	cd _build/src && \
-		ar rcs libbin_prot.a common.o read.o write.o size.o && \
+static: build_setup common read write size type_class rpc utils
+	cd _build/src &&  \
+		ar rcs          \
+		  libbin_prot.a \
+			common.o      \
+			read.o        \
+			write.o       \
+			size.o        \
+			type_class.o  \
+			rpc.o  \
+			utils.o && \
 		ranlib libbin_prot.a
 
 build_setup:
@@ -47,14 +55,24 @@ write: src/write.c build_setup common
 size: src/size.c build_setup common
 	cd _build/src && gcc $(CFLAGS) -fPIC -o size.o -c size.c
 
+type_class: src/type_class.c build_setup common
+	cd _build/src && gcc $(CFLAGS) -fPIC -o type_class.o -c type_class.c
+
+rpc: src/utils.c build_setup common
+	cd _build/src && gcc $(CFLAGS) -fPIC -o rpc.o -c rpc.c
+
+utils: src/utils.c build_setup common
+	cd _build/src && gcc $(CFLAGS) -fPIC -o utils.o -c utils.c
+
 export PKG_CONFIG
 pkgconfig:
 	@echo "$$PKG_CONFIG" > _build/libbin_prot.pc
 
 install: shared static pkgconfig
-	mkdir -p $(PREFIX)/include
-	install -m0644 _build/src/bin_prot.h $(PREFIX)/include
-	mkdir -p $(PREFIX)/lib
+	install -d -m0755 $(PREFIX)/include/bin_prot
+	install -d -m0755 $(PREFIX)/lib
+	install -d -m0755 $(PREFIX)/pkgconfig
+	install -m0644 _build/src/bin_prot/*.h $(PREFIX)/include/bin_prot
 	strip _build/src/libbin_prot.so.$(MAJOR).$(VER)
 	install -m0644 _build/src/libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib
 	ln -sf libbin_prot.so.$(MAJOR).$(VER) $(PREFIX)/lib/libbin_prot.so
@@ -62,15 +80,16 @@ install: shared static pkgconfig
 	install -m0644 _build/libbin_prot.pc $(PREFIX)/lib/pkgconfig
 
 uninstall:
-	rm -f $(PREFIX)/include/bin_prot.h
+	rm -f $(PREFIX)/include/bin_prot
 	rm -f $(PREFIX)/lib/libbin_prot.so
 	rm -f $(PREFIX)/lib/libbin_prot.so.$(MAJOR)
 	rm -f $(PREFIX)/lib/libbin_prot.so.$(MAJOR).$(VER)
+	rm -f $(PREFIX)/lib/pkgconfig/libbin_prot.pc
 
 clean:
 	rm -rf _build
 
-TEST_CFLAGS = -I../src -L../src
+TEST_CFLAGS = -I../src/bin_prot -L../src
 TEST_LDFLAGS = -lbin_prot
 
 test: test_sanity test_c_int_reader test_c_int_writer
