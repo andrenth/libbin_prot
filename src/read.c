@@ -3,9 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <bin_prot/read.h>
+
 #include "common.h"
 
-typedef int (*reader)(void *buf, size_t *pos, void *res);
+#include <stdio.h>
 
 static int8_t
 unsafe_get8_signed(void *buf, size_t pos)
@@ -110,15 +112,6 @@ unsafe_get32le(void *buf, size_t pos)
     int32_t x = unsafe_get32(buf, pos);
     if (arch_big_endian())
         return bswap32(x);
-    return x;
-}
-
-static int64_t
-unsafe_get64le(void *buf, size_t pos)
-{
-    int64_t x = unsafe_get64(buf, pos);
-    if (arch_big_endian())
-        return bswap64(x);
     return x;
 }
 
@@ -249,15 +242,20 @@ int
 bin_read_string(void *buf, size_t *pos, char **res)
 {
     size_t len;
-    int err = bin_read_nat0(buf, pos, &len);
-    if (err < 0)
+    int ret;
+
+    ret = bin_read_nat0(buf, pos, &len);
+    if (ret < 0)
         return -1;
+
     size_t next = *pos + len;
     char *s = malloc(len + 1);
+
     memcpy(s, buf + *pos, len);
     s[len] = '\0';
     *pos = next;
     *res = s;
+
     return 0;
 }
 
@@ -335,107 +333,6 @@ bin_read_int(void *buf, size_t *pos, long *res)
         return -1;
     }
 }
-
-int
-bin_read_option(reader bin_read_el, void *buf, size_t *pos, void *res)
-{
-    char c = ((char *)buf)[*pos];
-    switch(c) {
-    case '\000':
-        *pos += 1;
-        return 0;
-    case '\001':
-        *pos += 1;
-        if (bin_read_el(buf, pos, res) < 0)
-            return -1;
-        return 1;
-    default:
-        return -1;
-    }
-}
-
-int
-bin_read_pair(reader bin_read_a, reader bin_read_b, void *buf, size_t *pos,
-              void *res1, void *res2)
-{
-    if (bin_read_a(buf, pos, res1) < 0)
-        return -1;
-    if (bin_read_b(buf, pos, res2) < 0)
-        return -1;
-    return 0;
-}
-
-int
-bin_read_triple(reader bin_read_a, reader bin_read_b, reader bin_read_c,
-                void *buf, size_t *pos, void *res1, void *res2, void *res3)
-{
-    if (bin_read_a(buf, pos, res1) < 0)
-        return -1;
-    if (bin_read_b(buf, pos, res2) < 0)
-        return -1;
-    if (bin_read_c(buf, pos, res3) < 0)
-        return -1;
-    return 0;
-}
-
-static double
-float_of_bits(int64_t i)
-{
-    union { double d; int64_t i; int32_t h[2]; } u;
-    u.i = i;
-    return u.d;
-}
-
-int
-bin_read_float(void *buf, size_t *pos, double *res)
-{
-    int64_t i = unsafe_get64le(buf, *pos);
-    *pos += 8;
-    *res = float_of_bits(i);
-    return 0;
-}
-
-int
-bin_read_string_array(void *buf, size_t *pos, size_t *len, char ***res)
-{
-    unsigned long i;
-    if (bin_read_nat0(buf, pos, len) < 0)
-        return -1;
-    char **array = malloc(*len);
-    for (i = 0; i < *len; i++) {
-        char *s;
-        if (bin_read_string(buf, pos, &s) < 0)
-            return -1;
-        array[i] = strdup(s);
-    }
-    *res = array;
-    return 0;
-}
-
-#define BIN_READ_ARRAY(name, type)                                       \
-int                                                                      \
-bin_read_##name##_array(void *buf, size_t *pos, size_t *len, type **res) \
-{                                                                        \
-    unsigned long i;                                                     \
-    if (bin_read_nat0(buf, pos, len) < 0)                                \
-        return -1;                                                       \
-    type *array = malloc(*len * sizeof(type));                           \
-    for (i = 0; i < *len; i++) {                                         \
-        type r;                                                          \
-        if (bin_read_##name(buf, pos, &r) < 0)                           \
-            return -1;                                                   \
-        array[i] = r;                                                    \
-    }                                                                    \
-    *res = array;                                                        \
-    return 0;                                                            \
-}
-
-BIN_READ_ARRAY(bool,  int);
-BIN_READ_ARRAY(char,  unsigned char);
-BIN_READ_ARRAY(int,   long);
-BIN_READ_ARRAY(int32, int32_t);
-BIN_READ_ARRAY(int64, int64_t);
-BIN_READ_ARRAY(float, double);
 
 int
 bin_read_variant_int(void *buf, size_t *pos, long *res)
@@ -543,6 +440,121 @@ bin_read_network64_int64(void *buf, size_t *pos, int64_t *res)
 {
     *res = unsafe_get64be(buf, *pos);
     *pos += 8;
+    return 0;
+}
+
+int
+bin_read_option(bin_reader bin_read_el, void *buf, size_t *pos, void *res)
+{
+    char c = ((char *)buf)[*pos];
+    switch(c) {
+    case '\000':
+        *pos += 1;
+        return 0;
+    case '\001':
+        *pos += 1;
+        if (bin_read_el(buf, pos, res) < 0)
+            return -1;
+        return 1;
+    default:
+        return -1;
+    }
+}
+
+int
+bin_read_pair(bin_reader bin_read_a, bin_reader bin_read_b,
+              void *buf, size_t *pos, void *res1, void *res2)
+{
+    if (bin_read_a(buf, pos, res1) < 0)
+        return -1;
+    if (bin_read_b(buf, pos, res2) < 0)
+        return -1;
+    return 0;
+}
+
+int
+bin_read_triple(bin_reader bin_read_a,
+                bin_reader bin_read_b,
+                bin_reader bin_read_c,
+                void *buf, size_t *pos, void *res1, void *res2, void *res3)
+{
+    if (bin_read_a(buf, pos, res1) < 0)
+        return -1;
+    if (bin_read_b(buf, pos, res2) < 0)
+        return -1;
+    if (bin_read_c(buf, pos, res3) < 0)
+        return -1;
+    return 0;
+}
+
+static double
+float_of_bits(int64_t i)
+{
+    union { double d; int64_t i; int32_t h[2]; } u;
+    u.i = i;
+    return u.d;
+}
+
+int
+bin_read_float(void *buf, size_t *pos, double *res)
+{
+    int64_t i = unsafe_get64le(buf, *pos);
+    *pos += 8;
+    *res = float_of_bits(i);
+    return 0;
+}
+
+#define BIN_READ_ARRAY(name, type)                                       \
+int                                                                      \
+bin_read_##name##_array(void *buf, size_t *pos, size_t *len, type **res) \
+{                                                                        \
+    unsigned long i;                                                     \
+    if (bin_read_nat0(buf, pos, len) < 0)                                \
+        return -1;                                                       \
+    type *array = malloc(*len * sizeof(type));                           \
+    for (i = 0; i < *len; i++) {                                         \
+        type r;                                                          \
+        if (bin_read_##name(buf, pos, &r) < 0)                           \
+            return -1;                                                   \
+        array[i] = r;                                                    \
+    }                                                                    \
+    *res = array;                                                        \
+    return 0;                                                            \
+}
+
+BIN_READ_ARRAY(bool,            int);
+BIN_READ_ARRAY(char,            unsigned char);
+BIN_READ_ARRAY(int,             long);
+BIN_READ_ARRAY(int32,           int32_t);
+BIN_READ_ARRAY(int64,           int64_t);
+BIN_READ_ARRAY(int_8bit,        long);
+BIN_READ_ARRAY(int_16bit,       long);
+BIN_READ_ARRAY(int_32bit,       long);
+BIN_READ_ARRAY(int_64bit,       long);
+BIN_READ_ARRAY(int64_bits,      int64_t);
+BIN_READ_ARRAY(network16_int,   long);
+BIN_READ_ARRAY(network32_int,   long);
+BIN_READ_ARRAY(network64_int,   long);
+BIN_READ_ARRAY(network16_int16, int16_t);
+BIN_READ_ARRAY(network32_int32, int32_t);
+BIN_READ_ARRAY(network64_int64, int64_t);
+BIN_READ_ARRAY(variant_int,     long);
+BIN_READ_ARRAY(float,           double);
+
+int
+bin_read_string_array(void *buf, size_t *pos, size_t *len, char ***res)
+{
+    unsigned long i;
+    if (bin_read_nat0(buf, pos, len) < 0)
+        return -1;
+    char **array = malloc(*len);
+    for (i = 0; i < *len; i++) {
+        char *s;
+        if (bin_read_string(buf, pos, &s) < 0)
+            return -1;
+        array[i] = strdup(s);
+    }
+    *res = array;
     return 0;
 }
 

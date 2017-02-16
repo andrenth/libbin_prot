@@ -38,4 +38,5 @@ uint64_t unsafe_get64(void *buf, size_t pos);
 void unsafe_set32(void *buf, size_t i, int32_t n);
 void unsafe_set64(void *buf, size_t i, int64_t n);
 
+int64_t unsafe_get64le(void *buf, size_t pos);
 #endif

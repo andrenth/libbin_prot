@@ -92,3 +92,12 @@ unsafe_set64(void *buf, size_t i, int64_t n)
     ((unsigned char*)buf)[i + 6] = b7;
     ((unsigned char*)buf)[i + 7] = b8;
 }
+
+int64_t
+unsafe_get64le(void *buf, size_t pos)
+{
+    int64_t x = unsafe_get64(buf, pos);
+    if (arch_big_endian())
+        return bswap64(x);
+    return x;
+}

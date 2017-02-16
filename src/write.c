@@ -2,11 +2,10 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+
+#include <bin_prot/write.h>
 
 #include "common.h"
-
-typedef size_t (*writer)(void *buf, size_t pos, void *v);
 
 size_t
 bin_write_unit(void *buf, size_t pos, void *_unused)
@@ -173,7 +172,7 @@ bin_write_int(void *buf, size_t pos, long n)
 }
 
 size_t
-bin_write_string(void *buf, size_t pos, char *s)
+bin_write_string(void *buf, size_t pos, const char *s)
 {
     size_t len = strlen(s);
     size_t new_pos = bin_write_nat0(buf, pos, len);
@@ -231,7 +230,7 @@ bin_write_int64(void *buf, size_t pos, int64_t n)
 }
 
 size_t
-bin_write_option(writer bin_write_el, void *buf, size_t pos, void *opt)
+bin_write_option(bin_writer bin_write_el, void *buf, size_t pos, void *opt)
 {
     if (opt == NULL)
         return bin_write_bool(buf, pos, 0);
@@ -240,15 +239,17 @@ bin_write_option(writer bin_write_el, void *buf, size_t pos, void *opt)
 }
 
 size_t
-bin_write_pair(writer bin_write_a, writer bin_write_b, void *buf, size_t pos,
-               void *a, void *b)
+bin_write_pair(bin_writer bin_write_a, bin_writer bin_write_b,
+               void *buf, size_t pos, void *a, void *b)
 {
     pos = bin_write_a(buf, pos, a);
     return bin_write_b(buf, pos, b);
 }
 
 size_t
-bin_write_triple(writer bin_write_a, writer bin_write_b, writer bin_write_c,
+bin_write_triple(bin_writer bin_write_a,
+                 bin_writer bin_write_b,
+                 bin_writer bin_write_c,
                  void *buf, size_t pos, void *a, void *b, void *c)
 {
     pos = bin_write_a(buf, pos, a);
@@ -257,13 +258,15 @@ bin_write_triple(writer bin_write_a, writer bin_write_b, writer bin_write_c,
 }
 
 size_t
-bin_write_array(writer bin_write_el, void *buf, size_t pos, void **array,
+bin_write_array(bin_writer bin_write_el, void *buf, size_t pos, void **array,
                 size_t len)
 {
     size_t i;
+
     pos = bin_write_nat0(buf, pos, len);
     for (i = 0; i < len; i++)
         pos = bin_write_el(buf, pos, array[i]);
+
     return pos;
 }
 
