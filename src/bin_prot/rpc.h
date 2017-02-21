@@ -26,6 +26,6 @@ struct bin_rpc_connection *bin_rpc_client(int fd, const char *description);
 void bin_rpc_connection_free(struct bin_rpc_connection *conn);
 
 int bin_rpc_dispatch(struct bin_rpc *rpc, struct bin_rpc_connection *conn,
-                     void *data, void **res);
+                     void *data, void *res);
 
 #endif

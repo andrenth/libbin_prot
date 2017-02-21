@@ -14,10 +14,10 @@
 #include "common.h"
 
 struct query {
-    const char *tag;
-    long        version;
-    int64_t     id; /* int63_t */
-    void       *data;
+    char    *tag;
+    long     version;
+    int64_t  id; /* int63_t */
+    void    *data;
 };
 
 struct response {
@@ -56,21 +56,23 @@ struct with_length_args {
 };
 
 static size_t
-write_with_length(void *buf, size_t pos, void *arg)
+write_with_length(void *buf, size_t pos, void *arg, void *_unused)
 {
     struct with_length_args *args = (struct with_length_args *)arg;
-    size_t len = args->writer->size(args->data);
+    struct bin_type_class_writer *writer = args->writer;
+    size_t len = writer->size(args->data, writer->size_data);
 
     pos = bin_write_nat0(buf, pos, len);
-    pos = args->writer->write(buf, pos, args->data);
+    pos = writer->write(buf, pos, args->data, writer->write_data);
     return pos;
 }
 
 static size_t
-size_with_length(void *arg)
+size_with_length(void *arg, void *_unused)
 {
     struct with_length_args *args = (struct with_length_args *)arg;
-    size_t len = args->writer->size(args->data);
+    struct bin_type_class_writer *writer = args->writer;
+    size_t len = writer->size(args->data, writer->size_data);
 
     return bin_size_nat0(&len) + len;
 }
@@ -81,16 +83,14 @@ typedef enum {
 } result;
 
 static int
-bin_read_response(bin_reader read_data,
-                  void *data, void *buf, size_t *pos,
-                  struct response *resp)
+bin_read_response(struct bin_type_class_reader *data_reader,
+                  int64_t *id, void *data, void *buf, size_t *pos)
 {
     int ret;
     unsigned long len;
     long ok_or_error;
-    int64_t id;
 
-    ret = bin_read_int64(buf, pos, &id);
+    ret = bin_read_int64(buf, pos, id);
     if (ret == -1)
         return -1;
 
@@ -106,12 +106,9 @@ bin_read_response(bin_reader read_data,
     if (ret == -1)
         return -1;
 
-    ret = read_data(buf, pos, &data);
+    ret = data_reader->read(buf, pos, data, data_reader->read_data);
     if (ret == -1)
         return -1;
-
-    resp->id = id;
-    resp->data = data;
 
     return 0;
 }
@@ -175,14 +172,13 @@ struct read_msg_args {
 };
 
 static int
-bin_read_message(void *buf, size_t *pos, void *arg)
+bin_read_message(void *buf, size_t *pos, void *arg, void *_unused)
 {
     int ret;
     long type;
     struct read_msg_args *args = (struct read_msg_args *)arg;
     struct message *msg = args->msg;
     struct bin_type_class_reader *reader = args->reader;
-    void **data = (void **)msg->data;
 
     ret = bin_read_int_8bit(buf, pos, &type);
     if (ret == -1)
@@ -195,13 +191,13 @@ bin_read_message(void *buf, size_t *pos, void *arg)
         /* Can a client receive queries? */
         return -1;
     case MSG_RESPONSE: {
-        struct response resp;
-        ret = bin_read_response(reader->read, msg->data, buf, pos, &resp);
+        int64_t id;
+        ret = bin_read_response(reader, &id, msg->data, buf, pos);
+
         if (ret == -1) {
-            free(resp.data);
+            // XXX string? free(resp.data);
             return -1;
         }
-        *data = resp.data;
         return 0;
     }
     case MSG_HEARTBEAT:
@@ -218,17 +214,17 @@ struct message_args {
 };
 
 static size_t
-bin_write_message(void *buf, size_t pos, void *arg)
+bin_write_message(void *buf, size_t pos, void *arg, void *_unused)
 {
     struct message_args *args = (struct message_args *)arg;
     struct message *msg = args->msg;
-    struct bin_type_class_writer *data_writer = args->data_writer;
+    struct bin_type_class_writer *writer = args->data_writer;
 
     pos = bin_write_int_8bit(buf, pos, msg->type);
     switch (msg->type) {
     case MSG_QUERY:
     case MSG_RESPONSE:
-        return data_writer->write(buf, pos, msg->data);
+        return writer->write(buf, pos, msg->data, writer->write_data);
     case MSG_HEARTBEAT:
         return pos;
     }
@@ -237,9 +233,8 @@ bin_write_message(void *buf, size_t pos, void *arg)
 }
 
 static size_t
-bin_size_message(void *arg)
+bin_size_message(void *arg, void *_unused)
 {
-    size_t len;
     struct message_args *args = (struct message_args *)arg;
     struct message *msg = args->msg;
     struct bin_type_class_writer *data_writer = args->data_writer;
@@ -247,8 +242,7 @@ bin_size_message(void *arg)
     switch (msg->type) {
     case MSG_QUERY:
     case MSG_RESPONSE:
-        len = data_writer->size(msg->data);
-        return 1 + len;
+        return 1 + data_writer->size(msg->data, data_writer->size_data);
     case MSG_HEARTBEAT:
         return 1;
     }
@@ -263,10 +257,11 @@ struct query_writer_args {
 };
 
 static size_t
-bin_write_query(void *buf, size_t pos, void *arg)
+bin_write_query(void *buf, size_t pos, void *arg, void *_unused)
 {
     struct query_writer_args *args = (struct query_writer_args *)arg;
     struct query *query = args->query;
+    struct bin_type_class_writer *writer = args->writer;
 
     pos = bin_write_string(buf, pos, query->tag);
     pos = bin_write_int(buf, pos, query->version);
@@ -274,16 +269,17 @@ bin_write_query(void *buf, size_t pos, void *arg)
         pos = bin_write_int(buf, pos, query->id);
     else
         pos = bin_write_int64(buf, pos, query->id);
-    pos = args->writer->write(buf, pos, args->writer_args);
+    pos = writer->write(buf, pos, args->writer_args, writer->write_data);
 
     return pos;
 }
 
 static size_t
-bin_size_query(void *arg)
+bin_size_query(void *arg, void *_unused)
 {
     struct query_writer_args *args = (struct query_writer_args *)arg;
     struct query *query = args->query;
+    struct bin_type_class_writer *writer = args->writer;
     size_t size = 0;
 
     size += bin_size_string(query->tag);
@@ -292,7 +288,7 @@ bin_size_query(void *arg)
         size += bin_size_int(&query->id);
     else
         size += bin_size_int64(&query->id);
-    size += args->writer->size(args->writer_args);
+    size += writer->size(args->writer_args, writer->write_data);
 
     return size;
 }
@@ -349,13 +345,13 @@ dispatch_raw(struct bin_rpc_connection *conn,
 #define BUFFER_SIZE 128 * 1024
 
 static size_t
-bin_write_header(void *buf, size_t pos, void *val)
+bin_write_header(void *buf, size_t pos, void *val, void *_unused)
 {
     return bin_write_array((bin_writer)bin_write_int, buf, pos, val, 1);
 }
 
 static size_t
-bin_size_header(void *val)
+bin_size_header(void *val, void *_unused)
 {
     return bin_size_array((bin_sizer)bin_size_int, &val, 1);
 }
@@ -366,7 +362,7 @@ struct read_header_args {
 };
 
 static int
-bin_read_header(void *buf, size_t *pos, void *arg)
+bin_read_header(void *buf, size_t *pos, void *arg, void *_unused)
 {
     int i, ret;
     long *vs;
@@ -499,8 +495,8 @@ read_forever(struct bin_rpc_connection *conn,
 }
 
 struct read_callback_args {
-    bin_reader  read;
-    void       *data;
+    struct bin_type_class_reader *reader;
+    void                         *data;
 };
 
 read_callback_result
@@ -509,10 +505,11 @@ on_message(void *buf, size_t pos, size_t len, void *arg)
     int ret;
     size_t p = pos;
     struct read_callback_args *args = (struct read_callback_args *)arg;
+    struct bin_type_class_reader *reader = args->reader;
     struct read_msg_args *msg_args = (struct read_msg_args *)args->data;
     struct message *msg = msg_args->msg;
 
-    ret = args->read(buf, &p, msg_args);
+    ret = reader->read(buf, &p, msg_args, reader->read_data);
     if (ret == -1)
         return READ_CALLBACK_ERR;
 
@@ -531,10 +528,11 @@ on_message(void *buf, size_t pos, size_t len, void *arg)
 
 int
 bin_rpc_dispatch(struct bin_rpc *rpc, struct bin_rpc_connection *conn,
-                 void *data, void **res)
+                 void *data, void *res)
 {
     int ret;
     struct query query;
+    struct bin_type_class_reader message_reader;
     struct bin_type_class_writer *writer = rpc->bin_query->writer;
 
     query.tag     = rpc->tag;
@@ -556,7 +554,10 @@ bin_rpc_dispatch(struct bin_rpc *rpc, struct bin_rpc_connection *conn,
     msg_args.msg    = &msg;
     msg_args.reader = rpc->bin_response->reader;
 
-    on_message_args.read = bin_read_message;
+    message_reader.read = bin_read_message;
+    message_reader.read_data = rpc->bin_response->reader->read_data;
+
+    on_message_args.reader = &message_reader;
     on_message_args.data = &msg_args;
 
     ret = read_forever(conn, on_message, &on_message_args, &pos);
@@ -572,8 +573,9 @@ read_one_message_callback(void *buf, size_t pos, size_t len, void *arg)
     int ret;
     size_t p = pos;
     struct read_callback_args *args = (struct read_callback_args *)arg;
+    struct bin_type_class_reader *reader = args->reader;
 
-    ret = args->read(buf, &p, args->data);
+    ret = reader->read(buf, &p, args->data, reader->read_data);
     if (ret == -1)
         return READ_CALLBACK_ERR;
     if (p != pos + len)
@@ -589,7 +591,7 @@ read_one_message(struct bin_rpc_connection *conn,
     size_t pos;
     struct read_callback_args args;
 
-    args.read = reader->read;
+    args.reader = reader;
     args.data = res;
 
     pos = 0;
@@ -666,7 +668,7 @@ create_connection(struct transport *transport, const char *description)
     int ret;
     struct bin_rpc_connection *conn;
 
-    conn = calloc(1, sizeof(*conn));
+    conn = malloc(sizeof(*conn));
     conn->transport = transport;
     conn->description = description ? description : "<created-directly>";
 

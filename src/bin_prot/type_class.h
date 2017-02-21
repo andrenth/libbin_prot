@@ -5,13 +5,20 @@
 #include <bin_prot/write.h>
 #include <bin_prot/size.h>
 
+typedef int (*bin_type_class_reader_ex)(void *, size_t *, void *, void *);
+typedef size_t (*bin_type_class_writer_ex)(void *, size_t, void *, void *);
+typedef size_t (*bin_type_class_sizer_ex)(void *, void *);
+
 struct bin_type_class_writer {
-    bin_sizer  size;
-    bin_writer write;
+    bin_type_class_sizer_ex  size;
+    bin_type_class_writer_ex write;
+    void *size_data;
+    void *write_data;
 };
 
 struct bin_type_class_reader {
-    bin_reader read;
+    bin_type_class_reader_ex read;
+    void *read_data;
     /*XXX vtag_reader vtag_read; */
 };
 
