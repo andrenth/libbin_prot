@@ -7,8 +7,6 @@
 
 #include "common.h"
 
-#include <stdio.h>
-
 static int8_t
 unsafe_get8_signed(void *buf, size_t pos)
 {
@@ -125,7 +123,7 @@ unsafe_get16le_signed(void *buf, size_t pos)
 }
 
 int
-bin_read_unit(void *buf, size_t *pos)
+bin_read_unit(void *buf, size_t *pos, void *_unused)
 {
     unsigned char c = ((unsigned char *)buf)[*pos];
     if (c != '\000')

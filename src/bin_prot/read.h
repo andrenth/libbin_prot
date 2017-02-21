@@ -5,7 +5,7 @@
 
 typedef int (*bin_reader)(void *buf, size_t *pos, void *res);
 
-int bin_read_unit(void *buf, size_t *pos);
+int bin_read_unit(void *buf, size_t *pos, void *_unused);
 int bin_read_bool(void *buf, size_t *pos, int *res);
 int bin_read_char(void *buf, size_t *pos, unsigned char *res);
 
