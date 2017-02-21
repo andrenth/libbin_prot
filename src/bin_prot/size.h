@@ -7,7 +7,7 @@ typedef size_t (*bin_sizer)(void *v);
 
 size_t bin_size_unit(void *_unused);
 size_t bin_size_bool(int *_unused);
-size_t bin_size_char(char *_unused);
+size_t bin_size_char(unsigned char *_unused);
 
 size_t bin_size_nat0(size_t *np);
 
@@ -20,11 +20,15 @@ size_t bin_size_int_16bit(long *_unused);
 size_t bin_size_int_32bit(long *_unused);
 size_t bin_size_int_64bit(long *_unused);
 
-size_t bin_size_network16_int(int16_t *_unused);
-size_t bin_size_network32_int(int32_t *_unused);
-size_t bin_size_network64_int(int64_t *_unused);
+size_t bin_size_network16_int(long *_unused);
+size_t bin_size_network32_int(long *_unused);
+size_t bin_size_network64_int(long *_unused);
 
-size_t bin_size_variant_int(int32_t *_unused);
+size_t bin_size_network16_int16(int16_t *_unused);
+size_t bin_size_network32_int32(int32_t *_unused);
+size_t bin_size_network64_int64(int64_t *_unused);
+
+size_t bin_size_variant_int(long *_unused);
 
 size_t bin_size_float(double *_unused);
 

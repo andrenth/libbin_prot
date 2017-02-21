@@ -38,11 +38,12 @@ size_t
 bin_size_string(const char *s)
 {
     size_t len = strlen(s);
-    return bin_size_nat0(&len) + len;
+    size_t x = bin_size_nat0(&len) + len;
+    return x;
 }
 
 size_t
-bin_size_char(char *_unused)
+bin_size_char(unsigned char *_unused)
 {
     return 1;
 }
@@ -152,7 +153,7 @@ bin_size_array(bin_sizer bin_size_el, void **array, size_t len)
 }
 
 size_t
-bin_size_variant_int(int32_t *_unused)
+bin_size_variant_int(long *_unused)
 {
     return 4;
 }
@@ -182,19 +183,37 @@ bin_size_int_64bit(long *_unused)
 }
 
 size_t
-bin_size_network16_int(int16_t *_unused)
+bin_size_network16_int(long *_unused)
 {
     return 2;
 }
 
 size_t
-bin_size_network32_int(int32_t *_unused)
+bin_size_network32_int(long *_unused)
 {
     return 4;
 }
 
 size_t
-bin_size_network64_int(int64_t *_unused)
+bin_size_network64_int(long *_unused)
+{
+    return 8;
+}
+
+size_t
+bin_size_network16_int16(int16_t *_unused)
+{
+    return 2;
+}
+
+size_t
+bin_size_network32_int32(int32_t *_unused)
+{
+    return 4;
+}
+
+size_t
+bin_size_network64_int64(int64_t *_unused)
 {
     return 8;
 }
