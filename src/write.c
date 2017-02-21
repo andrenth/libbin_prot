@@ -176,7 +176,9 @@ bin_write_string(void *buf, size_t pos, const char *s)
 {
     size_t len = strlen(s);
     size_t new_pos = bin_write_nat0(buf, pos, len);
+
     memcpy(buf + new_pos, s, len);
+
     return new_pos + len;
 }
 
