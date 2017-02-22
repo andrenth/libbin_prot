@@ -45,6 +45,7 @@ size_t bin_size_triple(bin_sizer bin_size_a,
                        void *a, void *b, void *c);
 
 size_t bin_size_array(bin_sizer bin_size_el, void **array, size_t len);
+size_t bin_size_list(bin_sizer bin_size_el, void **list, size_t len);
 
 size_t bin_size_digest(const char *_unused);
 

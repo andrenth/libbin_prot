@@ -48,6 +48,8 @@ size_t bin_write_triple(bin_writer bin_write_a,
 
 size_t bin_write_array(bin_writer bin_write_el,
                        void *buf, size_t pos, void **array, size_t len);
+size_t bin_write_list(bin_writer bin_write_el,
+                      void *buf, size_t pos, void **list, size_t len);
 
 size_t bin_write_digest(void *buf, size_t pos, char *s);
 

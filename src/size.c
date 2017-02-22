@@ -153,6 +153,12 @@ bin_size_array(bin_sizer bin_size_el, void **array, size_t len)
 }
 
 size_t
+bin_size_list(bin_sizer bin_size_el, void **list, size_t len)
+{
+    return bin_size_array(bin_size_el, list, len);
+}
+
+size_t
 bin_size_variant_int(long *_unused)
 {
     return 4;

@@ -518,6 +518,12 @@ bin_read_##name##_array(void *buf, size_t *pos, size_t *len, type **res) \
     }                                                                    \
     *res = array;                                                        \
     return 0;                                                            \
+}                                                                        \
+                                                                         \
+int                                                                      \
+bin_read_##name##_list(void *buf, size_t *pos, size_t *len, type **res)  \
+{                                                                        \
+    return bin_read_##name##_array(buf, pos, len, res);                  \
 }
 
 BIN_READ_ARRAY(bool,            int);
@@ -554,6 +560,12 @@ bin_read_string_array(void *buf, size_t *pos, size_t *len, char ***res)
     }
     *res = array;
     return 0;
+}
+
+int
+bin_read_string_list(void *buf, size_t *pos, size_t *len, char ***res)
+{
+    return bin_read_string_array(buf, pos, len, res);
 }
 
 int

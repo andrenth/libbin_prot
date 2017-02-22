@@ -67,6 +67,27 @@ int bin_read_variant_int_array(void *buf, size_t *pos, size_t *len, long **res);
 int bin_read_float_array(void *buf, size_t *pos, size_t *len, double **res);
 int bin_read_string_array(void *buf, size_t *pos, size_t *len, char ***res);
 
+int bin_read_bool_list(void *buf, size_t *pos, size_t *len, int **res);
+int bin_read_char_list(void *buf, size_t *pos, size_t *len, unsigned char **res);
+int bin_read_int_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_int32_list(void *buf, size_t *pos, size_t *len, int32_t **res);
+int bin_read_int64_list(void *buf, size_t *pos, size_t *len, int64_t **res);
+int bin_read_int_8bit_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_int_16bit_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_int_32bit_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_int_64bit_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_int64_bits_list(void *buf, size_t *pos, size_t *len, int64_t **res);
+int bin_read_network16_int_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_network32_int_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_network64_int_list(void *buf, size_t *pos, size_t *len, long **res);
+int bin_read_network16_int16_list(void *buf, size_t *pos, size_t *len, int16_t **res);
+int bin_read_network32_int32_list(void *buf, size_t *pos, size_t *len, int32_t **res);
+int bin_read_network64_int64_list(void *buf, size_t *pos, size_t *len, int64_t **res);
+int bin_read_variant_int_list(void *buf, size_t *pos, size_t *len, long **res);
+
+int bin_read_float_list(void *buf, size_t *pos, size_t *len, double **res);
+int bin_read_string_list(void *buf, size_t *pos, size_t *len, char ***res);
+
 int bin_read_digest(void *buf, size_t *pos, char **res);
 
 #endif
