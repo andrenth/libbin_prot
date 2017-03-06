@@ -1,5 +1,5 @@
-MAJOR  = 1
-VER    = 1.0
+MAJOR  = 0
+VER    = 0.1
 CFLAGS = -Wall -g -I.
 PREFIX = /usr/local
 
