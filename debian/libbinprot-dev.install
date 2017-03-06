@@ -1,0 +1,3 @@
+usr/include/bin_prot usr/include
+usr/lib/libbin_prot*.a usr/lib
+usr/lib/libbin_prot*.so usr/lib

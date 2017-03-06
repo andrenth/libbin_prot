@@ -68,7 +68,7 @@ export PKG_CONFIG
 pkgconfig:
 	@echo "$$PKG_CONFIG" > _build/libbin_prot.pc
 
-install: shared static pkgconfig
+install: pkgconfig
 	install -d -m0755 $(PREFIX)/include/bin_prot
 	install -d -m0755 $(PREFIX)/lib
 	install -d -m0755 $(PREFIX)/pkgconfig

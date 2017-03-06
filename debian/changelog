@@ -1,0 +1,5 @@
+libbinprot (0.1.0-0digirati1) stable; urgency=low
+
+  * Build for 0.1.0.
+
+ -- Andre Nathan <andre@digirati.com.br>  Mon, 06 Mar 2017 17:46:25 -0300

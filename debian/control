@@ -1,0 +1,28 @@
+Source: libbinprot
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Andre Nathan <andre@digirati.com.br>
+Build-Depends: debhelper (>= 9~)
+Standards-Version: 3.9.8
+Section: libs
+Homepage: https://github.com/andrenth/libbin_prot
+
+Package: libbinprot-dev
+Section: libdevel
+Architecture: any
+Depends: libbinprot0 (= ${binary:Version}), ${misc:Depends}
+Description: Development libraries, header files and docs for libbin_prot
+ Contains the header files, documentation, examples and static libraries
+ for use in developing applications that use the libbin_prot library.
+ .
+ The libbin_prot library is an API that allows programs to read and write
+ serialized data in the bin_prot binary format and to act as RPC clients
+ when communicating with OCaml RPC servers.
+
+Package: libbinprot0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A library for bin_prot serialization and RPC
+ The libbin_prot library is an API that allows programs to read and write
+ serialized data in the bin_prot binary format and to act as RPC clients
+ when communicating with OCaml RPC servers.

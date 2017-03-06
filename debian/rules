@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	mkdir -p $(CURDIR)/debian/tmp/usr/lib
+	mkdir -p $(CURDIR)/debian/tmp/usr/include
+	$(MAKE) PREFIX=$(CURDIR)/debian/tmp/usr install
+	install _build/src/libbin_prot.a $(CURDIR)/debian/tmp/usr/lib
+	install _build/src/libbin_prot.so.* $(CURDIR)/debian/tmp/usr/lib
+
+override_dh_auto_test:
