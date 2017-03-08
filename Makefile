@@ -146,4 +146,12 @@ test_build_c_base: test_setup test/test.c
 	cd _build/test && \
 		gcc $(CFLAGS) $(TEST_CFLAGS) -o test.o -c test.c
 
-.PHONY: test build
+examples:
+	mkdir -p _build/examples
+	cp -a examples/* _build/examples
+	cd _build/examples && \
+		ocamlfind ocamlopt -thread -o server -package core,async -linkpkg server.ml
+	cd _build/examples && \
+		gcc $(CFLAGS) $(TEST_CFLAGS) -o client client.c $(TEST_LDFLAGS)
+
+.PHONY: test examples build
